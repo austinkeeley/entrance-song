@@ -1,0 +1,2 @@
+scapy==2.4.0
+SQLAlchemy==1.2.14
