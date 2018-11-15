@@ -1,5 +1,6 @@
 """Entrance song"""
 
+from datetime import datetime
 from scapy.all import *
 
 def dhcp_monitor_callback(pkt):
@@ -9,8 +10,9 @@ def dhcp_monitor_callback(pkt):
         return
 
     mac_addr = pkt[Ether].src
+    now = datetime.now()
 
-    print('DHCP request from {}'.format(mac_addr))
+    print('[{}-{}-{} {}:{}] DHCP request from {}'.format(now.year, now.month, now.day, now.hour, now.minute, mac_addr))
 
 
 

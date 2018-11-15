@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from models import DEFAULT_DB, Device
+from models import DEFAULT_DB, Device, Owner
 
 # If true, dump the data as we get it
 DEBUG = True
@@ -19,7 +19,7 @@ def get_all_devices():
 
     if DEBUG:
         for device in all_devices:
-            print(device)
+            print('{}'.format(device, device.owner))
 
     return all_devices
 
@@ -35,7 +35,9 @@ def get_device_by_mac_addr(mac_addr):
 def insert_dummy_devices():
     """Inserts dummy data into the database"""
     session = Session()
-    dummy_device = Device(mac_address='01:02:03:04:05:06', owner='unknown', hostname='localhost', song=None)
+    owner = Owner(name='austin', song='Dirty Deeds by AC/DC')
+    dummy_device = Device(mac_address='01:02:03:04:05:06', owner=owner, hostname='localhost')
+    session.add(owner)
     session.add(dummy_device)
     session.commit()
     session.close()
