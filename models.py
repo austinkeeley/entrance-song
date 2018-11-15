@@ -11,14 +11,14 @@ class Owner(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    song = Column(String)
     devices = relationship("Device", back_populates="owner", lazy='joined')
+    song = relationship ("Song", uselist=False, lazy='joined')
 
 class Device(Base):
     __tablename__ = 'device'
 
     id = Column(Integer, primary_key=True)
-    mac_address = Column(String)
+    mac_address = Column(String, nullable=False, unique=True)
     hostname = Column(String)
     friendly_name = Column(String)
     owner_id = Column(Integer, ForeignKey('owner.id'))
@@ -27,6 +27,19 @@ class Device(Base):
     def __str__(self):
         return 'MAC address: {}, hostname: {}, friendly name: {}, owner: {}'.format(self.mac_address, self.hostname, self.friendly_name, self.owner.name)
 
+class Song(Base):
+    __tablename__ = 'song'
+    id = Column(Integer, primary_key=True)
+    artist = Column(String)
+    title = Column(String)
+    start_minutes = Column(Integer)
+    start_seconds = Column(Integer)
+    duration = Column(Integer)
+    owner_id = Column(Integer, ForeignKey('owner.id'))
+
+    def __str__(self):
+        return '{} by {} (starts at {}:{}, {} seconds long)'.format(self.title, self.artist, self.start_minutes, self.start_seconds, self.duration)
+
 
 if __name__ == '__main__':
     from sqlalchemy import create_engine
@@ -34,14 +47,4 @@ if __name__ == '__main__':
     print('Creating tables')
     engine = create_engine(DEFAULT_DB)
     Base.metadata.create_all(engine)
-
-    Session = sessionmaker()
-    Session.configure(bind=engine)
-
-    # Create a default owner for devices that we don't know about
-    session = Session()
-    default_owner = Owner(name='unknown owner')
-    session.add(default_owner)
-    session.commit()
-    session.close()
 

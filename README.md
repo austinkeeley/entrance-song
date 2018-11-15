@@ -3,6 +3,12 @@ entrance-song
 
 Plays music when a DHCP lease is assigned.
 
+## Requires
+
+* A DHCP server
+* A Spotify developer key 
+* Python 3
+
 ## Usage
 
 Install dependencies
