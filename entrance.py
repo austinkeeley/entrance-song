@@ -3,6 +3,9 @@
 from datetime import datetime
 from scapy.all import *
 
+import data
+from util import log
+
 def dhcp_monitor_callback(pkt):
     if not pkt.haslayer(DHCP):
         return
@@ -10,12 +13,14 @@ def dhcp_monitor_callback(pkt):
         return
 
     mac_addr = pkt[Ether].src
-    now = datetime.now()
-
-    print('[{}-{}-{} {}:{}] DHCP request from {}'.format(now.year, now.month, now.day, now.hour, now.minute, mac_addr))
+    log('DHCP request from {}'.format(mac_addr))
+    device = data.get_device_by_mac_addr(mac_addr)
+    if not device:
+        log('This isn\'t a device I know about... Adding it to the database')
+        data.insert_device(mac_addr)
 
 
 
 if __name__ == '__main__':
-    print('Entrance song')
+    log('Entrance song')
     sniff(prn=dhcp_monitor_callback, filter='udp and (port 67 or 68)', store=0)

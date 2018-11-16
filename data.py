@@ -1,5 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import IntegrityError
 
 from models import DEFAULT_DB, Device, Owner, Song
 
@@ -38,8 +39,13 @@ def insert_device(mac_addr, hostname=None, friendly_name='unknown device', owner
 
     device = Device(mac_address=mac_addr, hostname=hostname, friendly_name=friendly_name, owner=owner)
     session = Session()
-    session.add(device)
-    session.commit()
+    try:
+        session.add(device)
+        session.commit()
+    except IntegrityError as e:
+        print('[*] Could not add device {}'.format(mac_addr))
+        print(e)
+
     session.close()
     return device
 

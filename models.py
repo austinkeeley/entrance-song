@@ -10,7 +10,7 @@ class Owner(Base):
     __tablename__ = 'owner'
 
     id = Column(Integer, primary_key=True)
-    name = Column(String)
+    name = Column(String, nullable=False, unique=True)
     devices = relationship("Device", back_populates="owner", lazy='joined')
     song = relationship ("Song", uselist=False, lazy='joined')
 
