@@ -1,3 +1,4 @@
 *.pyc
 entrance_song.db
+config.py
 venv/
