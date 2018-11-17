@@ -18,6 +18,13 @@ def dhcp_monitor_callback(pkt):
     if not device:
         log('This isn\'t a device I know about... Adding it to the database')
         data.insert_device(mac_addr)
+        return
+
+    if device.owner.song:
+        song = device.owner.song
+        log('{} is about to enter... playing {} by {}'.format(device.owner.name, song.title, song.artist))
+    else:
+        log('Device owner {} doesn\'t have a song. Doing nothing...'.format(device.owner.name))
 
 
 
