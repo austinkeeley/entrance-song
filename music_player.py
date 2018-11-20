@@ -4,20 +4,20 @@ from threading import Thread
 from time import sleep
 
 import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials
 import spotipy.util
 from util import log, debug
 
 SEARCH_LIMIT = 20
 SPOTIPY_USER_NAME = 'spotipy_user'
 
-DEFAULT_VOLUME=50
+DEFAULT_VOLUME = 50
 
 # Test uris
 # AC/DC - Dirty Deeds Done Dirt Cheap 'spotify:track:2d4e45fmUnguxh6yqC7gNT'
 # Led Zeppelin - Immigrant Song 'spotify:track:78lgmZwycJ3nzsdgmPPGNx'
 
 class MusicThread(Thread):
+    """A thread to start music and sleep until the duration so we don't block"""
     def __init__(self, sp_context, mp_context, uri, position_ms, duration):
         """Constructor
         """
@@ -31,8 +31,8 @@ class MusicThread(Thread):
 
     def run(self):
         # Is there already music playing? If so fade it out
-        playback = self.sp.current_playback()        
-        
+        playback = self.sp.current_playback()
+
         if playback.get('is_playing', False):
             log('Fading out old music')
             self.mp.fade_out(delta=7)
@@ -61,7 +61,7 @@ class MusicThread(Thread):
                 log('Attempted to stop song {} but it\'s not playing'.format(self.uri))
         finally:
             return
-        
+
 
 
 
@@ -78,7 +78,7 @@ class MusicPlayer(object):
         self.in_entrance_song = False
 
     def search(self, artist, title):
-        """Searches for a song by artist and title. 
+        """Searches for a song by artist and title.
         Returns the first result URI as a string or None if not found"""
         log('Searching for {} - {}'.format(artist, title))
         results = self.sp.search(q='{} {}'.format(artist, title), limit=SEARCH_LIMIT)
@@ -117,7 +117,7 @@ class MusicPlayer(object):
         self.sp.volume(volume)
 
     def play_song(self, uri, start_time_minute=0, start_time_second=0, duration=30):
-        """Plays a song by its URI. 
+        """Plays a song by its URI.
         Args:
             uri (string) - Unique Spotify URI for the song (returned as a tuple member from self.search)
             start_time_minutes (number) - How long to skip ahead in the song (minutes)
