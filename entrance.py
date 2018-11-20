@@ -1,10 +1,12 @@
 """Entrance song"""
 
-from datetime import datetime
 from scapy.all import *
 
+from music_player import MusicPlayer
 import data
 from util import log
+
+player = MusicPlayer()
 
 def dhcp_monitor_callback(pkt):
     if not pkt.haslayer(DHCP):
@@ -25,6 +27,13 @@ def dhcp_monitor_callback(pkt):
         log('{} is about to enter... playing {} by {}'.format(device.owner.name, song.title, song.artist))
     else:
         log('Device owner {} doesn\'t have a song. Doing nothing...'.format(device.owner.name))
+        return
+
+    uri, _ = player.search(song.artist, song.title)
+    if uri:
+        player.play_song(uri, duration=song.duration)
+    else:
+        log('No search results found...')
 
 
 

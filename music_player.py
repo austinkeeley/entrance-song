@@ -1,5 +1,8 @@
 """Code for playing music on spotify."""
 
+from threading import Thread
+from time import sleep
+
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 import spotipy.util
@@ -8,9 +11,59 @@ from util import log, debug
 SEARCH_LIMIT = 20
 SPOTIPY_USER_NAME = 'spotipy_user'
 
+DEFAULT_VOLUME=50
+
 # Test uris
 # AC/DC - Dirty Deeds Done Dirt Cheap 'spotify:track:2d4e45fmUnguxh6yqC7gNT'
 # Led Zeppelin - Immigrant Song 'spotify:track:78lgmZwycJ3nzsdgmPPGNx'
+
+class MusicThread(Thread):
+    def __init__(self, sp_context, mp_context, uri, position_ms, duration):
+        """Constructor
+        """
+        super().__init__()
+
+        self.sp = sp_context
+        self.mp = mp_context
+        self.uri = uri
+        self.position_ms = position_ms
+        self.duration = duration
+
+    def run(self):
+        # Is there already music playing? If so fade it out
+        playback = self.sp.current_playback()        
+        
+        if playback.get('is_playing', False):
+            log('Fading out old music')
+            self.mp.fade_out(delta=7)
+
+        log('Starting playback in new thread')
+        self.sp.start_playback(uris=[self.uri], position_ms=self.position_ms)
+        self.mp.set_volume(DEFAULT_VOLUME)
+        if not self.duration:
+            log('No duration specified. Playing the whole track!')
+            return
+
+        sleep(self.duration)
+        log('Stopping playback')
+        self.sp.in_entrance_song = False
+
+        # Get the currently playing tack to be sure we're stopping this track and not
+        # someone else's.
+        current_track = self.sp.currently_playing()
+        try:
+            uri = current_track['item']['uri']
+            if uri == self.uri:
+                self.mp.fade_out(delta=2)
+                self.sp.pause_playback()
+                self.mp.set_volume(DEFAULT_VOLUME)
+            else:
+                log('Attempted to stop song {} but it\'s not playing'.format(self.uri))
+        finally:
+            return
+        
+
+
 
 class MusicPlayer(object):
     """Wrapper around spotipy."""
@@ -21,6 +74,8 @@ class MusicPlayer(object):
         log('Constructing music player... might need to authenticate')
         token = spotipy.util.prompt_for_user_token(SPOTIPY_USER_NAME, scope)
         self.sp = spotipy.Spotify(auth=token)
+
+        self.in_entrance_song = False
 
     def search(self, artist, title):
         """Searches for a song by artist and title. 
@@ -43,10 +98,23 @@ class MusicPlayer(object):
         #print(self.sp.currently_playing())
         #self.sp.start_playback(uris=['spotify:track:2d4e45fmUnguxh6yqC7gNT'])
 
-    def current_song(self):
+    def currently_playing(self):
         """Returns the current playing song. This returns the Spotify object so it's probably way
         more than you need."""
         return self.sp.currently_playing()
+
+    def get_volume(self):
+        """Gets the current volume"""
+        playback = self.sp.current_playback()
+        device = playback.get('device', None)
+        if not device:
+            error('Could not get the current device')
+            return
+        volume = device['volume_percent']
+        return volume
+
+    def set_volume(self, volume):
+        self.sp.volume(volume)
 
     def play_song(self, uri, start_time_minute=0, start_time_second=0, duration=30):
         """Plays a song by its URI. 
@@ -59,15 +127,45 @@ class MusicPlayer(object):
         position = (start_time_second * 1000) + (start_time_minute * 60 * 1000)
 
         log('Playing song {}'.format(uri))
+        self.in_entrance_song = True
         # Save the currently playing song so we can resume it later
 
+        t = MusicThread(self.sp, self, uri, position, duration)
+        t.start()
 
-        self.sp.start_playback(uris=[uri])
-        self.sp.seek_track(position)
+    def fade_out(self, delta=2):
+        """Fades out the music, not in a very smart way"""
+        playback = self.sp.current_playback()
+        device = playback['device']
+        if not device:
+            error('Could not get the current device')
+
+        starting_volume = self.get_volume() # device['volume_percent']
+        log('Fading out... current volume is {}'.format(starting_volume))
+
+        while starting_volume > 0:
+            self.sp.volume(starting_volume)
+            sleep(1)
+            starting_volume = starting_volume - delta
+            debug('fade to {} '.format(starting_volume))
+
+    def fade_in(self, volume=DEFAULT_VOLUME, delta=2):
+        """Fades out the music, not in a very smart way"""
+
+        starting_volume = self.get_volume() # device['volume_percent']
+        log('Fading in... current volume is {}'.format(starting_volume))
+
+        while starting_volume < volume:
+            self.sp.volume(starting_volume)
+            sleep(1)
+            starting_volume = starting_volume + delta
+            debug('fade to {} '.format(starting_volume))
 
 if __name__ == '__main__':
     log('Authenticating account')
     player = MusicPlayer()
+    player.fade_in()
     uri, _ = player.search('AC/DC', 'Dirty Deeds Done Dirt Cheap')
-    player.play_song(uri, start_time_minute=0, start_time_second=28)
+    player.play_song(uri, start_time_minute=1, start_time_second=30, duration=20)
+    #player.fade_out()
 

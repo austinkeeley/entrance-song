@@ -6,4 +6,4 @@ scapy==2.4.0
 SQLAlchemy==1.2.14
 urllib3==1.24.1
 
-git+https://github.com/plamere/spotipy.git@4c2c1d763a3653aa225c4af848409ec31286a6bf
+git+https://github.com/austinkeeley/spotipy.git
