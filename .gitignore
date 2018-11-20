@@ -1,4 +1,5 @@
 *.pyc
+.cache-*
 entrance_song.db
 config.py
 venv/
