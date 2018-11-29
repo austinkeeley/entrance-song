@@ -10,7 +10,7 @@ from util import log, debug
 SEARCH_LIMIT = 20
 SPOTIPY_USER_NAME = 'spotipy_user'
 
-DEFAULT_VOLUME = 50
+DEFAULT_VOLUME = 30
 
 # Test uris
 # AC/DC - Dirty Deeds Done Dirt Cheap 'spotify:track:2d4e45fmUnguxh6yqC7gNT'
@@ -69,9 +69,8 @@ class MusicPlayer(object):
     """Wrapper around spotipy."""
 
     def __init__(self):
-        log('Constructing music player')
-        scope = 'streaming user-read-playback-state user-read-currently-playing'
         log('Constructing music player... might need to authenticate')
+        scope = 'streaming user-read-playback-state user-read-currently-playing'
         token = spotipy.util.prompt_for_user_token(SPOTIPY_USER_NAME, scope)
         self.sp = spotipy.Spotify(auth=token)
 
