@@ -10,7 +10,7 @@ from util import log, debug
 SEARCH_LIMIT = 20
 SPOTIPY_USER_NAME = 'spotipy_user'
 
-DEFAULT_VOLUME = 30
+DEFAULT_VOLUME = 50
 
 # Test uris
 # AC/DC - Dirty Deeds Done Dirt Cheap 'spotify:track:2d4e45fmUnguxh6yqC7gNT'
@@ -20,6 +20,12 @@ class MusicThread(Thread):
     """A thread to start music and sleep until the duration so we don't block"""
     def __init__(self, sp_context, mp_context, uri, position_ms, duration):
         """Constructor
+        Args
+            sp_context - The spotify context
+            mp_context - music player context
+            uri - The URI to play
+            position_ms - The position in ms to start from
+            duration - The duration to play
         """
         super().__init__()
 
@@ -105,6 +111,9 @@ class MusicPlayer(object):
     def get_volume(self):
         """Gets the current volume"""
         playback = self.sp.current_playback()
+        if not playback:
+            return 0
+
         device = playback.get('device', None)
         if not device:
             error('Could not get the current device')
@@ -135,6 +144,11 @@ class MusicPlayer(object):
     def fade_out(self, delta=2):
         """Fades out the music, not in a very smart way"""
         playback = self.sp.current_playback()
+
+        if not playback:
+            # Likely nothing is playing
+            return
+
         device = playback['device']
         if not device:
             error('Could not get the current device')
