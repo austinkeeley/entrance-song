@@ -2,10 +2,10 @@
 
 from threading import Thread
 from time import sleep
+import logging
 
 import spotipy
 import spotipy.util
-from util import log, debug
 
 SEARCH_LIMIT = 20
 SPOTIPY_USER_NAME = 'spotipy_user'
@@ -41,7 +41,7 @@ class MusicThread(Thread):
         original_volume = self.mp.get_volume()
 
         if playback.get('is_playing', False):
-            log('Fading out old music')
+            logging.info('Fading out old music')
             self.mp.fade_out(delta=2)
 
         # Set the volume to the previous level so we're ready to play
@@ -55,15 +55,15 @@ class MusicThread(Thread):
     def run(self):
         self.save_current_playback()
 
-        log('Starting playback in new thread')
+        logging.info('Starting playback in new thread')
         self.sp.start_playback(uris=[self.uri], position_ms=self.position_ms)
         self.mp.set_volume(DEFAULT_VOLUME)
         if not self.duration:
-            log('No duration specified. Playing the whole track!')
+            logging.info('No duration specified. Playing the whole track!')
             return
 
         sleep(self.duration)
-        log('Stopping playback')
+        logging.info('Stopping playback')
         self.sp.in_entrance_song = False
 
         # Get the currently playing tack to be sure we're stopping this track and not
@@ -76,7 +76,7 @@ class MusicThread(Thread):
                 self.sp.pause_playback()
                 self.mp.set_volume(DEFAULT_VOLUME)
             else:
-                log('Attempted to stop song {} but it\'s not playing'.format(self.uri))
+                logging.info('Attempted to stop song {} but it\'s not playing'.format(self.uri))
         finally:
             return
 
@@ -87,7 +87,7 @@ class MusicPlayer(object):
     """Wrapper around spotipy."""
 
     def __init__(self):
-        log('Constructing music player... might need to authenticate')
+        logging.info('Constructing music player... might need to authenticate')
         scope = 'streaming user-read-playback-state user-read-currently-playing'
         token = spotipy.util.prompt_for_user_token(SPOTIPY_USER_NAME, scope)
         self.sp = spotipy.Spotify(auth=token)
@@ -97,11 +97,11 @@ class MusicPlayer(object):
     def search(self, artist, title):
         """Searches for a song by artist and title.
         Returns the first result URI as a string or None if not found"""
-        log('Searching for {} - {}'.format(artist, title))
+        logging.info('Searching for {} - {}'.format(artist, title))
         results = self.sp.search(q='{} {}'.format(artist, title), limit=SEARCH_LIMIT)
-        log('Found {} results (limit {})'.format(len(results['tracks']['items']), SEARCH_LIMIT))
+        logging.info('Found {} results (limit {})'.format(len(results['tracks']['items']), SEARCH_LIMIT))
         for i, t in enumerate(results['tracks']['items']):
-            debug('{} {} {}'.format(i, t['name'], t['uri']))
+            logging.debug('{} {} {}'.format(i, t['name'], t['uri']))
 
         if len(results['tracks']['items']) > 0:
             search_result_uri = results['tracks']['items'][0]['uri']
@@ -109,7 +109,7 @@ class MusicPlayer(object):
         else:
             search_result_uri = None
             search_result_name = None
-        log('Returning {} ({})'.format(search_result_name, search_result_uri))
+        logging.info('Returning {} ({})'.format(search_result_name, search_result_uri))
         return search_result_uri, search_result_name
 
         #print(self.sp.currently_playing())
@@ -128,7 +128,7 @@ class MusicPlayer(object):
 
         device = playback.get('device', None)
         if not device:
-            error('Could not get the current device')
+            logging.error('Could not get the current device')
             return
         volume = device['volume_percent']
         return volume
@@ -146,7 +146,7 @@ class MusicPlayer(object):
         """
         position = (start_time_second * 1000) + (start_time_minute * 60 * 1000)
 
-        log('Playing song {}'.format(uri))
+        logging.info('Playing song {}'.format(uri))
         self.in_entrance_song = True
         # Save the currently playing song so we can resume it later
 
@@ -163,31 +163,32 @@ class MusicPlayer(object):
 
         device = playback['device']
         if not device:
-            error('Could not get the current device')
+            logging.error('Could not get the current device')
 
         starting_volume = self.get_volume() # device['volume_percent']
-        log('Fading out... current volume is {}'.format(starting_volume))
+        logging.info('Fading out... current volume is {}'.format(starting_volume))
 
         while starting_volume > 0:
             self.sp.volume(starting_volume)
             sleep(1)
             starting_volume = starting_volume - delta
-            debug('fade to {} '.format(starting_volume))
+            logging.debug('fade to {} '.format(starting_volume))
 
     def fade_in(self, volume=DEFAULT_VOLUME, delta=2):
         """Fades out the music, not in a very smart way"""
 
         starting_volume = self.get_volume() # device['volume_percent']
-        log('Fading in... current volume is {}'.format(starting_volume))
+        logging.info('Fading in... current volume is {}'.format(starting_volume))
 
         while starting_volume < volume:
             self.sp.volume(starting_volume)
             sleep(1)
             starting_volume = starting_volume + delta
-            debug('fade to {} '.format(starting_volume))
+            logging.debug('fade to {} '.format(starting_volume))
 
 if __name__ == '__main__':
-    log('Authenticating account')
+    logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s %(levelname)s] %(message)s', datefmt='%Y %b %d %H:%M:%S')
+    logging.info('Authenticating account')
     player = MusicPlayer()
     uri, _ = player.search('AC/DC', 'Dirty Deeds Done Dirt Cheap')
     player.play_song(uri, start_time_minute=1, start_time_second=30, duration=20)

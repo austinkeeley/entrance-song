@@ -1,12 +1,12 @@
 """Entrance song"""
 
 from datetime import datetime
+import logging
 
 from scapy.all import Ether, DHCP, sniff
 
 from music_player import MusicPlayer
 import data
-from util import log
 
 
 class EntranceController(object):
@@ -17,7 +17,7 @@ class EntranceController(object):
 
     def start(self):
         """Starts sniffing"""
-        log('Starting sniffing for DHCP traffic')
+        logging.info('Starting sniffing for DHCP traffic')
         sniff(prn=self.dhcp_monitor_callback, filter='udp and (port 67 or 68)', store=0)
 
 
@@ -29,39 +29,39 @@ class EntranceController(object):
             return
 
         mac_addr = pkt[Ether].src
-        log('DHCP request from {}'.format(mac_addr))
+        logging.info('DHCP request from {}'.format(mac_addr))
         device = data.get_device_by_mac_addr(mac_addr)
         if not device:
-            log('This isn\'t a device I know about... Adding it to the database')
+            logging.info('This isn\'t a device I know about... Adding it to the database')
             data.insert_device(mac_addr)
             return
 
         if self.last_entrance[0] is not None and self.last_entrance[0].name == device.owner.name:
-            log('{} was the last person to enter. Has enough time passed to go again?'.format(device.owner.name))
+            logging.info('{} was the last person to enter. Has enough time passed to go again?'.format(device.owner.name))
             now = datetime.now()
             if self.last_entrance[1] is not None and (now - self.last_entrance[1]).seconds < 30:
-                log('Nope. Hasn\'t been long enough')
+                logging.info('Nope. Hasn\'t been long enough')
                 return
         else:
 
             now = datetime.now()
             self.last_entrance = (device.owner, now)
-            log(self.last_entrance)
+            logging.info(self.last_entrance)
 
 
 
         if device.owner.song:
             song = device.owner.song
-            log('{} is about to enter! playing {} by {}'.format(device.owner.name, song.title, song.artist))
+            logging.info('{} is about to enter! playing {} by {}'.format(device.owner.name, song.title, song.artist))
         else:
-            log('Device owner {} doesn\'t have a song. Doing nothing...'.format(device.owner.name))
+            logging.info('Device owner {} doesn\'t have a song. Doing nothing...'.format(device.owner.name))
             return
 
         uri, _ = self.player.search(song.artist, song.title)
         if uri:
             self.player.play_song(uri, duration=song.duration)
         else:
-            log('No search results found...')
+            logging.info('No search results found...')
 
     def playback(self):
         pass
@@ -74,5 +74,8 @@ class EntranceController(object):
 
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s %(levelname)s] %(message)s', datefmt='%Y %b %d %H:%M:%S')
+    logging.info('Starting entrance song application')
+
     entrance = EntranceController()
     entrance.start()
