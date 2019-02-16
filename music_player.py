@@ -35,13 +35,25 @@ class MusicThread(Thread):
         self.position_ms = position_ms
         self.duration = duration
 
-    def run(self):
+    def save_current_playback(self):
         # Is there already music playing? If so fade it out
         playback = self.sp.current_playback()
+        original_volume = self.mp.get_volume()
 
         if playback.get('is_playing', False):
             log('Fading out old music')
-            self.mp.fade_out(delta=7)
+            self.mp.fade_out(delta=2)
+
+        # Set the volume to the previous level so we're ready to play
+        self.sp.pause_playback()
+        self.mp.set_volume(original_volume)
+
+
+    def restore_previous_playback(self):
+        pass
+
+    def run(self):
+        self.save_current_playback()
 
         log('Starting playback in new thread')
         self.sp.start_playback(uris=[self.uri], position_ms=self.position_ms)
@@ -177,7 +189,6 @@ class MusicPlayer(object):
 if __name__ == '__main__':
     log('Authenticating account')
     player = MusicPlayer()
-    player.fade_in()
     uri, _ = player.search('AC/DC', 'Dirty Deeds Done Dirt Cheap')
     player.play_song(uri, start_time_minute=1, start_time_second=30, duration=20)
     #player.fade_out()
