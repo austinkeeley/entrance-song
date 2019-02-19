@@ -42,7 +42,7 @@ class MusicThread(Thread):
 
         if playback.get('is_playing', False):
             logging.info('Fading out old music')
-            self.mp.fade_out(delta=2)
+            self.mp.fade_out(delta=10)
 
         # Set the volume to the previous level so we're ready to play
         self.sp.pause_playback()
@@ -72,7 +72,7 @@ class MusicThread(Thread):
         try:
             uri = current_track['item']['uri']
             if uri == self.uri:
-                self.mp.fade_out(delta=2)
+                self.mp.fade_out(delta=10)
                 self.sp.pause_playback()
                 self.mp.set_volume(DEFAULT_VOLUME)
             else:
