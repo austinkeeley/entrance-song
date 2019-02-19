@@ -5,8 +5,8 @@ import logging
 
 from scapy.all import Ether, DHCP, sniff
 
-from music_player import MusicPlayer
-import data
+from .music_player import MusicPlayer
+from . import data
 
 
 class EntranceController(object):
@@ -70,10 +70,13 @@ class EntranceController(object):
         # Begin playing the new track
         # wait for the thread to complete
 
-if __name__ == '__main__':
+def main():
     logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s %(levelname)s] %(message)s',
                         datefmt='%Y %b %d %H:%M:%S')
     logging.info('Starting entrance song application')
 
     entrance = EntranceController()
     entrance.start()
+
+if __name__ == '__main__':
+    main()

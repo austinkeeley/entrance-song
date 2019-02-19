@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError
 
-from models import DEFAULT_DB, Device, Owner, Song
+from .models import DEFAULT_DB, Device, Owner, Song
 
 # If true, dump the data as we get it
 DEBUG = False
