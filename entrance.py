@@ -29,7 +29,7 @@ class EntranceController(object):
             return
 
         mac_addr = pkt[Ether].src
-        logging.info('DHCP request from {}'.format(mac_addr))
+        logging.info('DHCP request from %s', mac_addr)
         device = data.get_device_by_mac_addr(mac_addr)
         if not device:
             logging.info('This isn\'t a device I know about... Adding it to the database')
@@ -37,7 +37,7 @@ class EntranceController(object):
             return
 
         if self.last_entrance[0] is not None and self.last_entrance[0].name == device.owner.name:
-            logging.info('{} was the last person to enter. Has enough time passed to go again?'.format(device.owner.name))
+            logging.info('%s was the last person to enter. Has enough time passed to go again?', device.owner.name)
             now = datetime.now()
             if self.last_entrance[1] is not None and (now - self.last_entrance[1]).seconds < 30:
                 logging.info('Nope. Hasn\'t been long enough')
@@ -52,9 +52,9 @@ class EntranceController(object):
 
         if device.owner.song:
             song = device.owner.song
-            logging.info('{} is about to enter! playing {} by {}'.format(device.owner.name, song.title, song.artist))
+            logging.info('%s is about to enter! playing %s by %s', device.owner.name, song.title, song.artist)
         else:
-            logging.info('Device owner {} doesn\'t have a song. Doing nothing...'.format(device.owner.name))
+            logging.info('Device owner %s doesn\'t have a song. Doing nothing...', device.owner.name)
             return
 
         uri, _ = self.player.search(song.artist, song.title)
@@ -70,11 +70,9 @@ class EntranceController(object):
         # Begin playing the new track
         # wait for the thread to complete
 
-
-
-
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s %(levelname)s] %(message)s', datefmt='%Y %b %d %H:%M:%S')
+    logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s %(levelname)s] %(message)s',
+                        datefmt='%Y %b %d %H:%M:%S')
     logging.info('Starting entrance song application')
 
     entrance = EntranceController()
