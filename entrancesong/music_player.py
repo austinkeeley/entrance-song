@@ -1,5 +1,6 @@
 """Code for playing music on spotify."""
 
+from queue import Queue
 from threading import Thread
 from time import sleep
 import logging
@@ -83,10 +84,14 @@ class MusicThread(Thread):
 
 
 
-class MusicPlayer(object):
-    """Wrapper around spotipy."""
+class MusicPlayer(Thread):
+    """Wrapper around spotipy.
+    This is in a thread because it uses a blocking queue and we don't want the whole
+    application to block.
+    """
 
     def __init__(self):
+        super().__init__()
         logging.info('Constructing music player... might need to authenticate')
         scope = 'streaming user-read-playback-state user-read-currently-playing'
         token = spotipy.util.prompt_for_user_token(SPOTIPY_USER_NAME, scope)
@@ -94,9 +99,18 @@ class MusicPlayer(object):
 
         self.in_entrance_song = False
 
+        self.song_queue = Queue()
+
+
     def search(self, artist, title):
         """Searches for a song by artist and title.
-        Returns the first result URI as a string or None if not found"""
+
+        Args:
+            artist - The song artist
+            title - The song title
+
+        Returns a tuple of the (uri, title) or None if not found
+        """
         logging.info('Searching for {} - {}'.format(artist, title))
         results = self.sp.search(q='{} {}'.format(artist, title), limit=SEARCH_LIMIT)
         logging.info('Found {} results (limit {})'.format(len(results['tracks']['items']), SEARCH_LIMIT))
@@ -116,12 +130,14 @@ class MusicPlayer(object):
         #self.sp.start_playback(uris=['spotify:track:2d4e45fmUnguxh6yqC7gNT'])
 
     def currently_playing(self):
-        """Returns the current playing song. This returns the Spotify object so it's probably way
-        more than you need."""
+        """Returns the current playing song.
+
+        Returns a Spotify object (so it's probably way more than you need)"""
         return self.sp.currently_playing()
 
     def get_volume(self):
-        """Gets the current volume"""
+        """Gets the current volume
+        """
         playback = self.sp.current_playback()
         if not playback:
             return 0
@@ -143,6 +159,7 @@ class MusicPlayer(object):
             start_time_minutes (number) - How long to skip ahead in the song (minutes)
             start_time_seconds (number) - How long to skip ahead in the song (seconds)
             duration (number) - How long to play the song. If None, plays the whole thing.
+        Returns the MusicThread created by this method
         """
         position = (start_time_second * 1000) + (start_time_minute * 60 * 1000)
 
@@ -152,6 +169,7 @@ class MusicPlayer(object):
 
         t = MusicThread(self.sp, self, uri, position, duration)
         t.start()
+        return t
 
     def fade_out(self, delta=2):
         """Fades out the music, not in a very smart way"""
@@ -186,11 +204,37 @@ class MusicPlayer(object):
             starting_volume = starting_volume + delta
             logging.debug('fade to {} '.format(starting_volume))
 
+
+    def queue_song(self, uri, start_minute=0, start_second=0, duration=30):
+        """
+        Queues a song up
+        """
+        logging.info('Queueing song %s', uri)
+        self.song_queue.put((uri, start_minute, start_second, duration))
+
+    def run(self):
+        self.player_main()
+
+    def player_main(self):
+        logging.info('Starting music player')
+        while True:
+            uri, start_minute, start_second, duration = self.song_queue.get(True)
+            logging.info('Found a song on the queue!')
+            logging.info('Playing %s at %d:%d duration %d', uri, start_minute, start_second, duration)
+            t = self.play_song(uri, start_minute, start_second, duration)
+            logging.info('Waiting for song to end...')
+            t.join()
+            logging.info('Song over... waiting for the next song on the queue')
+
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s %(levelname)s] %(message)s', datefmt='%Y %b %d %H:%M:%S')
     logging.info('Authenticating account')
     player = MusicPlayer()
     uri, _ = player.search('AC/DC', 'Dirty Deeds Done Dirt Cheap')
-    player.play_song(uri, start_time_minute=1, start_time_second=30, duration=20)
+    player.queue_song(uri, 1, 30, 20)
+
+    player.player_main()
+    #player.play_song(uri, start_time_minute=1, start_time_second=30, duration=20)
     #player.fade_out()
 

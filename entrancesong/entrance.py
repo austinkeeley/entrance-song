@@ -18,6 +18,7 @@ class EntranceController(object):
     def start(self):
         """Starts sniffing"""
         logging.info('Starting sniffing for DHCP traffic')
+        self.player.start()
         sniff(prn=self.dhcp_monitor_callback, filter='udp and (port 67 or 68)', store=0)
 
 
@@ -64,7 +65,8 @@ class EntranceController(object):
             # TODO: make the music player have a queue and queue up the song instead
             # maybe enqueue the current song at the lowest priority so it will play
             # after this one finishes (and after anyone else enters)
-            self.player.play_song(uri, duration=song.duration)
+            #self.player.play_song(uri, duration=song.duration)
+            self.player.queue_song(uri, duration=song.duration)
         else:
             logging.info('No search results found...')
 
