@@ -39,6 +39,8 @@ class EntranceController(object):
         if self.last_entrance[0] is not None and self.last_entrance[0].name == device.owner.name:
             logging.info('%s was the last person to enter. Has enough time passed to go again?', device.owner.name)
             now = datetime.now()
+            elapsed = (now - self.last_entrance[1]).seconds
+            logging.info('Elapsed time since %s entered: %d', device.owner.name, elapsed)
             if self.last_entrance[1] is not None and (now - self.last_entrance[1]).seconds < 30:
                 logging.info('Nope. Hasn\'t been long enough')
                 return
@@ -59,6 +61,9 @@ class EntranceController(object):
 
         uri, _ = self.player.search(song.artist, song.title)
         if uri:
+            # TODO: make the music player have a queue and queue up the song instead
+            # maybe enqueue the current song at the lowest priority so it will play
+            # after this one finishes (and after anyone else enters)
             self.player.play_song(uri, duration=song.duration)
         else:
             logging.info('No search results found...')
