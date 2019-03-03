@@ -11,11 +11,25 @@ import spotipy.util
 SEARCH_LIMIT = 20
 SPOTIPY_USER_NAME = 'spotipy_user'
 
+# The default volume to set things to, in percent
 DEFAULT_VOLUME = 50
+
+FADE_DELTA=5
 
 # Test uris
 # AC/DC - Dirty Deeds Done Dirt Cheap 'spotify:track:2d4e45fmUnguxh6yqC7gNT'
 # Led Zeppelin - Immigrant Song 'spotify:track:78lgmZwycJ3nzsdgmPPGNx'
+
+
+class PlaybackState(object):
+    def __init__(self, uri, offset=0, volume=DEFAULT_VOLUME, start_ms=0):
+        self.uri = uri
+        self.offset = offset
+        self.volume = volume
+        self.start_ms = start_ms
+
+    def __str__(self):
+        return 'URI: %s Offset %d Volume %d Start ms %s' % (self.uri, self.offset, self.volume, self.start_ms)
 
 class MusicThread(Thread):
     """A thread to start music and sleep until the duration so we don't block"""
@@ -43,14 +57,16 @@ class MusicThread(Thread):
 
         if playback.get('is_playing', False):
             logging.info('Fading out old music')
-            self.mp.fade_out(delta=10)
+            self.mp.fade_out()
 
         # Set the volume to the previous level so we're ready to play
         self.sp.pause_playback()
         self.mp.set_volume(original_volume)
 
 
+
     def restore_previous_playback(self):
+        """Restores the previous song"""
         pass
 
     def run(self):
@@ -73,7 +89,7 @@ class MusicThread(Thread):
         try:
             uri = current_track['item']['uri']
             if uri == self.uri:
-                self.mp.fade_out(delta=10)
+                self.mp.fade_out()
                 self.sp.pause_playback()
                 self.mp.set_volume(DEFAULT_VOLUME)
             else:
@@ -101,6 +117,8 @@ class MusicPlayer(Thread):
 
         self.song_queue = Queue()
 
+        self.original_playback = None
+        self.original_volume = None
 
     def search(self, artist, title):
         """Searches for a song by artist and title.
@@ -171,7 +189,7 @@ class MusicPlayer(Thread):
         t.start()
         return t
 
-    def fade_out(self, delta=2):
+    def fade_out(self, delta=FADE_DELTA):
         """Fades out the music, not in a very smart way"""
         playback = self.sp.current_playback()
 
@@ -188,7 +206,7 @@ class MusicPlayer(Thread):
 
         while starting_volume > 0:
             self.sp.volume(starting_volume)
-            sleep(1)
+            sleep(0.5)
             starting_volume = starting_volume - delta
             logging.debug('fade to {} '.format(starting_volume))
 
@@ -215,15 +233,82 @@ class MusicPlayer(Thread):
     def run(self):
         self.player_main()
 
+
+    def save_current_playback(self):
+        """Fades out the current song and saves it"""
+        # Is there already music playing? If so fade it out
+        playback = self.sp.current_playback()
+
+        # This means nothing is playing
+        if not playback:
+            return
+
+        original_volume = self.get_volume()
+
+        if playback.get('is_playing', False):
+            logging.info('Fading out old music')
+            self.fade_out()
+
+        # Set the volume to the previous level so we're ready to play
+        self.sp.pause_playback()
+        self.set_volume(original_volume)
+
+        # sleep for just a second to be sure things caught up
+        sleep(1)
+
+
+        #self.original_playback = playback['context']['uri']
+        self.original_playback = playback
+        print(self.original_playback)
+
+        # usually I'm playing a playlist or an album, so grab the offset into that
+        print('I AM PLAYING A %s at URI %s' % (playback['context']['type'], playback['context']['uri']))
+
+
+    def get_playlist_offset(self, playlist_uri, song_uri):
+        """Gets the offset of a song on a playlist.
+        Args:
+            playlist_uri - The playlist Spotify URI
+            song_uri - The track song_uri
+
+        Returns the position (starting at index 0) or -1 if the track is not found
+        """
+
+        tracks = [x.get('track') for x in self.sp.playlist_tracks(playlist_uri).get('items', [])]
+
+        count = 0
+        for track in tracks:
+            if track.get('uri', '') == song_uri:
+                return count
+            count = count + 1
+
+        return -1
+
+    def restore_playback(self):
+        if not self.original_playback:
+            return
+        context = self.original_playback.get('context', {})
+        item = self.original_playback.get('item', {})
+        uri = context.get('uri', '')
+
+        logging.info('Restoring playback to %s %s', context.get('type', ''), uri)
+
+        logging.info(item.get('type'))
+        self.sp.start_playback(context_uri=uri, offset={'uri': item.get('uri', '')})
+        self.fade_in()
+
+
     def player_main(self):
         logging.info('Starting music player')
         while True:
             uri, start_minute, start_second, duration = self.song_queue.get(True)
             logging.info('Found a song on the queue!')
             logging.info('Playing %s at %d:%d duration %d', uri, start_minute, start_second, duration)
+            current_playback = self.save_current_playback()
             t = self.play_song(uri, start_minute, start_second, duration)
             logging.info('Waiting for song to end...')
             t.join()
+            self.restore_playback()
             logging.info('Song over... waiting for the next song on the queue')
 
 
@@ -231,10 +316,15 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s %(levelname)s] %(message)s', datefmt='%Y %b %d %H:%M:%S')
     logging.info('Authenticating account')
     player = MusicPlayer()
-    uri, _ = player.search('AC/DC', 'Dirty Deeds Done Dirt Cheap')
-    player.queue_song(uri, 1, 30, 20)
 
-    player.player_main()
+    #uri, _ = player.search('Papa Roach', 'Last Resort')
+    #player.queue_song(uri, 0, 0, 15)
+    #player.player_main()
     #player.play_song(uri, start_time_minute=1, start_time_second=30, duration=20)
     #player.fade_out()
+    player.save_current_playback()
+    sleep(1)
+    player.restore_playback()
+
+    #print(player.get_playlist_offset('spotify:user:12164336727:playlist:2sSwD0ElIwd62KM1UjoDrr', 'spotify:track:5Fwif6oyL2EjXAFTGL909U'))
 
