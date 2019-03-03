@@ -210,7 +210,7 @@ class MusicPlayer(Thread):
             starting_volume = starting_volume - delta
             logging.debug('fade to {} '.format(starting_volume))
 
-    def fade_in(self, volume=DEFAULT_VOLUME, delta=2):
+    def fade_in(self, volume=DEFAULT_VOLUME, delta=FADE_DELTA):
         """Fades out the music, not in a very smart way"""
 
         starting_volume = self.get_volume() # device['volume_percent']
@@ -218,7 +218,7 @@ class MusicPlayer(Thread):
 
         while starting_volume < volume:
             self.sp.volume(starting_volume)
-            sleep(1)
+            sleep(0.5)
             starting_volume = starting_volume + delta
             logging.debug('fade to {} '.format(starting_volume))
 
