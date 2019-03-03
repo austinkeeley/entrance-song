@@ -91,7 +91,7 @@ class MusicThread(Thread):
             if uri == self.uri:
                 self.mp.fade_out()
                 self.sp.pause_playback()
-                self.mp.set_volume(DEFAULT_VOLUME)
+                #self.mp.set_volume(DEFAULT_VOLUME)
             else:
                 logging.info('Attempted to stop song {} but it\'s not playing'.format(self.uri))
         finally:
