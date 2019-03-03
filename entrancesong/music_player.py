@@ -290,11 +290,12 @@ class MusicPlayer(Thread):
         context = self.original_playback.get('context', {})
         item = self.original_playback.get('item', {})
         uri = context.get('uri', '')
+        position_ms = self.original_playback.get('progress_ms', 0)
 
         logging.info('Restoring playback to %s %s', context.get('type', ''), uri)
 
         logging.info(item.get('type'))
-        self.sp.start_playback(context_uri=uri, offset={'uri': item.get('uri', '')})
+        self.sp.start_playback(context_uri=uri, offset={'uri': item.get('uri', '')}, position_ms=position_ms)
         self.fade_in()
 
 
