@@ -46,12 +46,8 @@ class EntranceController(object):
                 logging.info('Nope. Hasn\'t been long enough')
                 return
         else:
-
             now = datetime.now()
             self.last_entrance = (device.owner, now)
-            logging.info(self.last_entrance)
-
-
 
         if device.owner.song:
             song = device.owner.song
@@ -78,7 +74,7 @@ class EntranceController(object):
         # wait for the thread to complete
 
 def main():
-    logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s %(levelname)s] %(message)s',
+    logging.basicConfig(level=logging.INFO, format='[%(asctime)s %(levelname)s] %(message)s',
                         datefmt='%Y %b %d %H:%M:%S')
     logging.info('Starting entrance song application')
 
