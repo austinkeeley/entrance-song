@@ -13,26 +13,16 @@ SPOTIPY_USER_NAME = 'spotipy_user'
 
 # The default volume to set things to, in percent
 DEFAULT_VOLUME = 50
-
+# The volume to play MusicThreads at. This should generally be slightly louder
+# than whatever else you're used to since we want to make an entrance.
+ENTRANCE_VOLUME = 70
 FADE_DELTA=5
 
-# Test uris
-# AC/DC - Dirty Deeds Done Dirt Cheap 'spotify:track:2d4e45fmUnguxh6yqC7gNT'
-# Led Zeppelin - Immigrant Song 'spotify:track:78lgmZwycJ3nzsdgmPPGNx'
-
-
-class PlaybackState(object):
-    def __init__(self, uri, offset=0, volume=DEFAULT_VOLUME, start_ms=0):
-        self.uri = uri
-        self.offset = offset
-        self.volume = volume
-        self.start_ms = start_ms
-
-    def __str__(self):
-        return 'URI: %s Offset %d Volume %d Start ms %s' % (self.uri, self.offset, self.volume, self.start_ms)
-
 class MusicThread(Thread):
-    """A thread to start music and sleep until the duration so we don't block"""
+    """A thread to start music and sleep. This is a cheap way to implement playing
+    a duration of a song since the Spotify API doesn't include that.
+
+    """
     def __init__(self, sp_context, mp_context, uri, position_ms, duration):
         """Constructor
         Args
@@ -50,38 +40,19 @@ class MusicThread(Thread):
         self.position_ms = position_ms
         self.duration = duration
 
-    def save_current_playback(self):
-        # Is there already music playing? If so fade it out
-        playback = self.sp.current_playback()
-        original_volume = self.mp.get_volume()
-
-        if playback.get('is_playing', False):
-            logging.info('Fading out old music')
-            self.mp.fade_out()
-
-        # Set the volume to the previous level so we're ready to play
-        self.sp.pause_playback()
-        self.mp.set_volume(original_volume)
-
-
-
-    def restore_previous_playback(self):
-        """Restores the previous song"""
-        pass
-
     def run(self):
-        self.save_current_playback()
-
+        """Runs the thread.
+        Plays the song, sleeps and then stops the track.
+        """
         logging.info('Starting playback in new thread')
         self.sp.start_playback(uris=[self.uri], position_ms=self.position_ms)
-        self.mp.set_volume(DEFAULT_VOLUME)
+        self.mp.set_volume(ENTRANCE_VOLUME)
         if not self.duration:
             logging.info('No duration specified. Playing the whole track!')
             return
 
         sleep(self.duration)
         logging.info('Stopping playback')
-        self.sp.in_entrance_song = False
 
         # Get the currently playing tack to be sure we're stopping this track and not
         # someone else's.
@@ -101,7 +72,8 @@ class MusicThread(Thread):
 
 
 class MusicPlayer(Thread):
-    """Wrapper around spotipy.
+    """Wrapper around spotipy with some extra syntax sugar.
+
     This is in a thread because it uses a blocking queue and we don't want the whole
     application to block.
     """
@@ -112,8 +84,6 @@ class MusicPlayer(Thread):
         scope = 'streaming user-read-playback-state user-read-currently-playing'
         token = spotipy.util.prompt_for_user_token(SPOTIPY_USER_NAME, scope)
         self.sp = spotipy.Spotify(auth=token)
-
-        self.in_entrance_song = False
 
         self.song_queue = Queue()
 
@@ -182,7 +152,6 @@ class MusicPlayer(Thread):
         position = (start_time_second * 1000) + (start_time_minute * 60 * 1000)
 
         logging.info('Playing song {}'.format(uri))
-        self.in_entrance_song = True
         # Save the currently playing song so we can resume it later
 
         t = MusicThread(self.sp, self, uri, position, duration)
@@ -234,8 +203,12 @@ class MusicPlayer(Thread):
         self.player_main()
 
 
-    def save_current_playback(self):
-        """Fades out the current song and saves it"""
+    def save_current_playback(self, fade=True):
+        """Stops the current playback and saves it
+
+        Args:
+            fade - If true, this fades the song out before saving it
+        """
         # Is there already music playing? If so fade it out
         playback = self.sp.current_playback()
 
@@ -247,7 +220,8 @@ class MusicPlayer(Thread):
 
         if playback.get('is_playing', False):
             logging.info('Fading out old music')
-            self.fade_out()
+            if fade:
+                self.fade_out()
 
         # Set the volume to the previous level so we're ready to play
         self.sp.pause_playback()
@@ -256,47 +230,29 @@ class MusicPlayer(Thread):
         # sleep for just a second to be sure things caught up
         sleep(1)
 
-
-        #self.original_playback = playback['context']['uri']
+        logging.info('Saving previous playback to bring back later')
         self.original_playback = playback
-        print(self.original_playback)
 
-        # usually I'm playing a playlist or an album, so grab the offset into that
-        print('I AM PLAYING A %s at URI %s' % (playback['context']['type'], playback['context']['uri']))
+    def restore_playback(self, fade=True):
+        """Restores a saved playback
 
-
-    def get_playlist_offset(self, playlist_uri, song_uri):
-        """Gets the offset of a song on a playlist.
         Args:
-            playlist_uri - The playlist Spotify URI
-            song_uri - The track song_uri
-
-        Returns the position (starting at index 0) or -1 if the track is not found
+            fade - If true, this fades the song in
         """
-
-        tracks = [x.get('track') for x in self.sp.playlist_tracks(playlist_uri).get('items', [])]
-
-        count = 0
-        for track in tracks:
-            if track.get('uri', '') == song_uri:
-                return count
-            count = count + 1
-
-        return -1
-
-    def restore_playback(self):
         if not self.original_playback:
             return
         context = self.original_playback.get('context', {})
         item = self.original_playback.get('item', {})
         uri = context.get('uri', '')
         position_ms = self.original_playback.get('progress_ms', 0)
+        original_volume = self.original_playback.get('device', {}).get('volume_percent', DEFAULT_VOLUME)
 
         logging.info('Restoring playback to %s %s', context.get('type', ''), uri)
 
-        logging.info(item.get('type'))
-        self.sp.start_playback(context_uri=uri, offset={'uri': item.get('uri', '')}, position_ms=position_ms)
-        self.fade_in()
+        if self.original_playback.get('is_playing', False):
+            self.sp.start_playback(context_uri=uri, offset={'uri': item.get('uri', '')}, position_ms=position_ms)
+            if fade:
+                self.fade_in(volume=original_volume)
 
 
     def player_main(self):
