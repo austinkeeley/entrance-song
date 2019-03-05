@@ -3,6 +3,7 @@
 from queue import Queue
 from threading import Thread
 from time import sleep
+from datetime import datetime, timedelta
 import logging
 
 import spotipy
@@ -17,6 +18,12 @@ DEFAULT_VOLUME = 50
 # than whatever else you're used to since we want to make an entrance.
 ENTRANCE_VOLUME = 70
 FADE_DELTA=5
+
+SCOPE = 'streaming user-read-playback-state user-read-currently-playing'
+
+# Spotify token timeout in minutes. Usually set by Spotify to 1 hour. Setting it a
+# little under.
+TOKEN_TIMEOUT = 50
 
 class MusicThread(Thread):
     """A thread to start music and sleep. This is a cheap way to implement playing
@@ -81,14 +88,31 @@ class MusicPlayer(Thread):
     def __init__(self):
         super().__init__()
         logging.info('Constructing music player... might need to authenticate')
-        scope = 'streaming user-read-playback-state user-read-currently-playing'
-        token = spotipy.util.prompt_for_user_token(SPOTIPY_USER_NAME, scope)
+        token = spotipy.util.prompt_for_user_token(SPOTIPY_USER_NAME, SCOPE)
         self.sp = spotipy.Spotify(auth=token)
 
         self.song_queue = Queue()
 
         self.original_playback = None
         self.original_volume = None
+
+        self.token_refresh_datetime = datetime.now()
+
+    def refresh_token(self):
+        logging.info('Checking token freshness')
+        token = spotipy.util.prompt_for_user_token(SPOTIPY_USER_NAME, SCOPE)
+        return
+
+        timeout = timedelta(minutes=TOKEN_TIMEOUT)
+        if self.token_refresh_datetime + timeout < datetime.now():
+            logging.info('Getting a new token')
+            token = spotipy.util.prompt_for_user_token(SPOTIPY_USER_NAME, SCOPE)
+            self.token_refresh_datetime = datetime.now()
+        else:
+            logging.info('Token still fresh')
+
+        #self.sp = spotipy.Spotify(auth=token)
+
 
     def search(self, artist, title):
         """Searches for a song by artist and title.
@@ -243,6 +267,9 @@ class MusicPlayer(Thread):
             return
         context = self.original_playback.get('context', {})
         item = self.original_playback.get('item', {})
+        if not context:
+            return
+
         uri = context.get('uri', '')
         position_ms = self.original_playback.get('progress_ms', 0)
         original_volume = self.original_playback.get('device', {}).get('volume_percent', DEFAULT_VOLUME)
