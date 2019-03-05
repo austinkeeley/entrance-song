@@ -56,13 +56,14 @@ class EntranceController(object):
             logging.info('Device owner %s doesn\'t have a song. Doing nothing...', device.owner.name)
             return
 
+        self.player.refresh_token()
         uri, _ = self.player.search(song.artist, song.title)
         if uri:
             # TODO: make the music player have a queue and queue up the song instead
             # maybe enqueue the current song at the lowest priority so it will play
             # after this one finishes (and after anyone else enters)
             #self.player.play_song(uri, duration=song.duration)
-            self.player.queue_song(uri, duration=song.duration)
+            self.player.queue_song(uri, duration=song.duration, start_minute=song.start_minutes, start_second=song.start_seconds)
         else:
             logging.info('No search results found...')
 
