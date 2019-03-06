@@ -16,7 +16,7 @@ SPOTIPY_USER_NAME = 'spotipy_user'
 DEFAULT_VOLUME = 50
 # The volume to play MusicThreads at. This should generally be slightly louder
 # than whatever else you're used to since we want to make an entrance.
-ENTRANCE_VOLUME = 70
+ENTRANCE_VOLUME = 30
 FADE_DELTA=5
 
 SCOPE = 'streaming user-read-playback-state user-read-currently-playing'
@@ -85,35 +85,41 @@ class MusicPlayer(Thread):
     application to block.
     """
 
+    def check_token(func):
+        def foo(*args, **kwargs):
+            logging.info('Checking if token is still good')
+
+            myself = args[0]
+            auth = myself.sp_auth
+
+            token_info = auth.get_cached_token()
+            logging.info('Comparing \n%s\n%s', token_info['access_token'], myself.token)
+            if token_info['access_token'] != myself.token:
+                new_token = token_info['access_token']
+                logging.info('Re-building sp')
+                myself.sp = spotipy.Spotify(auth=new_token)
+                myself.token = new_token
+
+            return func(*args, **kwargs)
+        return foo
+
     def __init__(self):
         super().__init__()
         logging.info('Constructing music player... might need to authenticate')
-        token = spotipy.util.prompt_for_user_token(SPOTIPY_USER_NAME, SCOPE)
+        token, sp_auth = spotipy.util.prompt_for_user_token(SPOTIPY_USER_NAME, SCOPE)
         self.sp = spotipy.Spotify(auth=token)
 
         self.song_queue = Queue()
 
         self.original_playback = None
         self.original_volume = None
+        self.sp_auth = sp_auth
+        self.token = token
 
         self.token_refresh_datetime = datetime.now()
 
-    def refresh_token(self):
-        logging.info('Checking token freshness')
-        token = spotipy.util.prompt_for_user_token(SPOTIPY_USER_NAME, SCOPE)
-        return
 
-        timeout = timedelta(minutes=TOKEN_TIMEOUT)
-        if self.token_refresh_datetime + timeout < datetime.now():
-            logging.info('Getting a new token')
-            token = spotipy.util.prompt_for_user_token(SPOTIPY_USER_NAME, SCOPE)
-            self.token_refresh_datetime = datetime.now()
-        else:
-            logging.info('Token still fresh')
-
-        #self.sp = spotipy.Spotify(auth=token)
-
-
+    @check_token
     def search(self, artist, title):
         """Searches for a song by artist and title.
 
@@ -164,6 +170,7 @@ class MusicPlayer(Thread):
     def set_volume(self, volume):
         self.sp.volume(volume)
 
+    @check_token
     def play_song(self, uri, start_time_minute=0, start_time_second=0, duration=30):
         """Plays a song by its URI.
         Args:
