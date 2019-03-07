@@ -21,6 +21,11 @@ class EntranceController(object):
         self.player.start()
         sniff(prn=self.dhcp_monitor_callback, filter='udp and (port 67 or 68)', store=0)
 
+    def get_dhcp_option_value(self, options, key):
+        for option in options:
+            if key == option[0]:
+                return option[1]
+        return None
 
     def dhcp_monitor_callback(self, pkt):
         """Callback for DHCP requests"""
@@ -30,7 +35,11 @@ class EntranceController(object):
             return
 
         mac_addr = pkt[Ether].src
-        logging.info('DHCP request from %s', mac_addr)
+        hostname = str(self.get_dhcp_option_value(pkt[DHCP].options, 'hostname'))
+        ip = self.get_dhcp_option_value(pkt[DHCP].options, 'requested_addr')
+
+
+        logging.info('DHCP request from %s for %s', mac_addr, ip)
         device = data.get_device_by_mac_addr(mac_addr)
         if not device:
             logging.info('This isn\'t a device I know about... Adding it to the database')
@@ -41,17 +50,20 @@ class EntranceController(object):
             logging.info('%s was the last person to enter. Has enough time passed to go again?', device.owner.name)
             now = datetime.now()
             elapsed = (now - self.last_entrance[1]).seconds
-            logging.info('Elapsed time since %s entered: %d', device.owner.name, elapsed)
+            logging.info('Elapsed time since %s entered: %d seconds', device.owner.name, elapsed)
             if self.last_entrance[1] is not None and (now - self.last_entrance[1]).seconds < 30:
                 logging.info('Nope. Hasn\'t been long enough')
                 return
+            self.last_entrance = (device.owner, now)
         else:
             now = datetime.now()
             self.last_entrance = (device.owner, now)
 
         if device.owner.song:
             song = device.owner.song
-            logging.info('%s is about to enter! playing %s by %s', device.owner.name, song.title, song.artist)
+            logging.info('#########################################################################')
+            logging.info('%s is about to enter (%s)! playing %s by %s', device.owner.name, device.friendly_name, song.title, song.artist)
+            logging.info('#########################################################################')
         else:
             logging.info('Device owner %s doesn\'t have a song. Doing nothing...', device.owner.name)
             return

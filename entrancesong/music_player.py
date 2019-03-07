@@ -52,8 +52,9 @@ class MusicThread(Thread):
         Plays the song, sleeps and then stops the track.
         """
         logging.info('Starting playback in new thread')
-        self.sp.start_playback(uris=[self.uri], position_ms=self.position_ms)
+        self.sp.pause_playback()
         self.mp.set_volume(ENTRANCE_VOLUME)
+        self.sp.start_playback(uris=[self.uri], position_ms=self.position_ms)
         if not self.duration:
             logging.info('No duration specified. Playing the whole track!')
             return
@@ -87,16 +88,15 @@ class MusicPlayer(Thread):
 
     def check_token(func):
         def foo(*args, **kwargs):
-            logging.info('Checking if token is still good')
+            logging.debug('Checking if token is still good')
 
             myself = args[0]
             auth = myself.sp_auth
 
             token_info = auth.get_cached_token()
-            logging.info('Comparing \n%s\n%s', token_info['access_token'], myself.token)
             if token_info['access_token'] != myself.token:
                 new_token = token_info['access_token']
-                logging.info('Re-building sp')
+                logging.debug('Re-building sp')
                 myself.sp = spotipy.Spotify(auth=new_token)
                 myself.token = new_token
 
