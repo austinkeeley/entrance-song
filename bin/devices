@@ -1,0 +1,71 @@
+#!/usr/bin/env python
+
+import argparse
+import logging
+
+import sys
+import os
+
+dir_path = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(dir_path + '/..')
+
+from colorama import init, Fore, Style
+import spotipy.util as util
+from spotipy.client import Spotify
+
+def make_client():
+    """Builds a Spotify client object"""
+
+    scope = 'streaming user-read-playback-state user-read-currently-playing'
+    token, _ = util.prompt_for_user_token('spotipy_user', scope)
+    spotify_client = Spotify(auth=token)
+    return spotify_client
+
+def get_devices(spotify_client):
+    logging.info('Getting all devices')
+    return spotify_client.devices().get('devices', [])
+
+def print_devices(devices):
+    """Queries Spotify for a list of the user's devices"""
+
+    for device in devices:
+        is_active = device.get('is_active', False)
+        if is_active:
+            print(Fore.GREEN, end='')
+
+        print(Style.BRIGHT, '* ID:', Style.NORMAL, '     %s' % device.get('id'))
+        print(Style.BRIGHT, '  Name:', Style.NORMAL, '   %s' % device.get('name', 'Unknown'))
+        print(Style.BRIGHT, '  Type:', Style.NORMAL, '   %s' % device.get('type', 'Unknown'))
+        print(Style.BRIGHT, '  Active:', Style.NORMAL, ' %s' % device.get('is_active', 'Unknown'))
+        print(Style.BRIGHT, '  Volume:', Style.NORMAL, ' |', end='')
+        print(Style.DIM, end='')
+        vol = 0
+        while vol < device.get('volume_percent', 0):
+            print('█', end='')
+            vol += 10
+        while vol < 100:
+            print(' ', end='')
+            vol += 10
+        print(Style.NORMAL, end='')
+
+        print('|', end='')
+        print('  %s%%' % device.get('volume_percent', 0))
+        print(Style.RESET_ALL)
+
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO, format='[%(asctime)s %(levelname)s] %(message)s',
+                        datefmt='%Y %b %d %H:%M:%S')
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-set', dest='device_id', action='store')
+    args = parser.parse_args()
+
+    init()
+    client = make_client()
+
+    if args.device_id:
+        print('Setting device %s' % args.device_id)
+        client.transfer_playback(args.device_id, True)
+
+    print_devices(get_devices(client))
+
