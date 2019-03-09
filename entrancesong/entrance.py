@@ -1,5 +1,5 @@
 """Entrance song"""
-
+import argparse
 from datetime import datetime
 import logging
 
@@ -11,8 +11,9 @@ from . import data
 
 class EntranceController(object):
     """Class that starts listening for DHCP connections and playing music"""
-    def __init__(self):
-        self.player = MusicPlayer()
+    def __init__(self, default_volume=70):
+        logging.info('Using default volume %d percent', default_volume)
+        self.player = MusicPlayer(default_volume=default_volume)
         self.last_entrance = (None, None)
 
     def start(self):
@@ -90,7 +91,20 @@ def main():
                         datefmt='%Y %b %d %H:%M:%S')
     logging.info('Starting entrance song application')
 
-    entrance = EntranceController()
+    parser = argparse.ArgumentParser(description='Listens for DHCP traffic and plays music')
+    parser.add_argument('--volume', dest='default_volume', action='store', default=70, type=int)
+    parser.add_argument('--device', dest='default_device_id', action='store', default=None, type=str)
+    args = parser.parse_args()
+
+    if args.default_volume > 100 or args.default_volume < 0:
+        print('Volume must be between 0 and 100')
+        exit(1)
+
+
+    if args.default_device_id:
+        logging.info('Using device %s', args.default_device_id)
+
+    entrance = EntranceController(default_volume=args.default_volume)
     entrance.start()
 
 if __name__ == '__main__':

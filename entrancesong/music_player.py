@@ -53,7 +53,7 @@ class MusicThread(Thread):
         """
         logging.info('Starting playback in new thread')
         self.sp.pause_playback()
-        self.mp.set_volume(ENTRANCE_VOLUME)
+        self.mp.set_volume(self.mp.default_volume)
         self.sp.start_playback(uris=[self.uri], position_ms=self.position_ms)
         if not self.duration:
             logging.info('No duration specified. Playing the whole track!')
@@ -103,7 +103,7 @@ class MusicPlayer(Thread):
             return func(*args, **kwargs)
         return foo
 
-    def __init__(self):
+    def __init__(self, default_volume=70):
         super().__init__()
         logging.info('Constructing music player... might need to authenticate')
         token, sp_auth = spotipy.util.prompt_for_user_token(SPOTIPY_USER_NAME, SCOPE)
@@ -115,6 +115,7 @@ class MusicPlayer(Thread):
         self.original_volume = None
         self.sp_auth = sp_auth
         self.token = token
+        self.default_volume = default_volume
 
         self.token_refresh_datetime = datetime.now()
 
