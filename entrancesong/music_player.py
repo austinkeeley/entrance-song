@@ -16,7 +16,7 @@ SPOTIPY_USER_NAME = 'spotipy_user'
 DEFAULT_VOLUME = 50
 # The volume to play MusicThreads at. This should generally be slightly louder
 # than whatever else you're used to since we want to make an entrance.
-ENTRANCE_VOLUME = 30
+ENTRANCE_VOLUME = 70
 FADE_DELTA=5
 
 SCOPE = 'streaming user-read-playback-state user-read-currently-playing'

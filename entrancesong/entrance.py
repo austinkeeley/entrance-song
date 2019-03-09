@@ -35,7 +35,7 @@ class EntranceController(object):
             return
 
         mac_addr = pkt[Ether].src
-        hostname = str(self.get_dhcp_option_value(pkt[DHCP].options, 'hostname'))
+        hostname = self.get_dhcp_option_value(pkt[DHCP].options, 'hostname').decode('utf-8')
         ip = self.get_dhcp_option_value(pkt[DHCP].options, 'requested_addr')
 
 
@@ -43,7 +43,7 @@ class EntranceController(object):
         device = data.get_device_by_mac_addr(mac_addr)
         if not device:
             logging.info('This isn\'t a device I know about... Adding it to the database')
-            data.insert_device(mac_addr)
+            data.insert_device(mac_addr, hostname)
             return
 
         if self.last_entrance[0] is not None and self.last_entrance[0].name == device.owner.name:

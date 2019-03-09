@@ -3,8 +3,9 @@
 import argparse
 import logging
 
-import sys
 import os
+import sys
+from time import sleep
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(dir_path + '/..')
@@ -58,14 +59,18 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-set', dest='device_id', action='store')
+    parser.add_argument('-stop',  action='store_const', const='stop',  required=False)
     args = parser.parse_args()
 
     init()
     client = make_client()
 
-    if args.device_id:
+    if args.stop:
+        client.pause_playback()
+    elif args.device_id:
         print('Setting device %s' % args.device_id)
         client.transfer_playback(args.device_id, True)
+        sleep(1)
 
     print_devices(get_devices(client))
 
