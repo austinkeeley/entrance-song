@@ -185,8 +185,8 @@ class MusicPlayer(Thread):
         volume = device['volume_percent']
         return volume
 
-    def set_volume(self, volume):
-        self.sp.volume(volume)
+    def set_volume(self, volume, device_id=None):
+        self.sp.volume(volume, device_id=device_id)
 
     @check_token
     def play_song(self, uri, start_time_minute=0, start_time_second=0, duration=30):
@@ -292,6 +292,7 @@ class MusicPlayer(Thread):
             return
         context = self.original_playback.get('context', {})
         item = self.original_playback.get('item', {})
+        device_id = self.original_playback.get('device', {}).get('id', None)
         if not context:
             return
 
@@ -302,6 +303,9 @@ class MusicPlayer(Thread):
         logging.info('Restoring playback to %s %s', context.get('type', ''), uri)
 
         if self.original_playback.get('is_playing', False):
+            self.sp.transfer_playback(device_id=device_id, force_play=False)
+            sleep(1)
+            self.set_volume(0, device_id=device_id)
             self.sp.start_playback(context_uri=uri, offset={'uri': item.get('uri', '')}, position_ms=position_ms)
             if fade:
                 self.fade_in(volume=original_volume)
