@@ -14,21 +14,13 @@ SPOTIPY_USER_NAME = 'spotipy_user'
 
 # The default volume to set things to, in percent
 DEFAULT_VOLUME = 50
-# The volume to play MusicThreads at. This should generally be slightly louder
-# than whatever else you're used to since we want to make an entrance.
-ENTRANCE_VOLUME = 70
 FADE_DELTA=5
 
 SCOPE = 'streaming user-read-playback-state user-read-currently-playing'
 
-# Spotify token timeout in minutes. Usually set by Spotify to 1 hour. Setting it a
-# little under.
-TOKEN_TIMEOUT = 50
-
 class MusicThread(Thread):
     """A thread to start music and sleep. This is a cheap way to implement playing
     a duration of a song since the Spotify API doesn't include that.
-
     """
     def __init__(self, sp_context, mp_context, uri, position_ms, duration=45, device_id=None):
         """Constructor
@@ -37,7 +29,7 @@ class MusicThread(Thread):
             mp_context - music player context
             uri - The URI to play
             position_ms - The position in ms to start from
-            duration - The duration to play
+            duration - The duration to play, in seconds
             device_id - The device to play on, or None to play on the default device
         """
         super().__init__()
@@ -90,6 +82,9 @@ class MusicPlayer(Thread):
     """
 
     def check_token(func):
+        """Decorator that forces the function to verify the token is still valid.
+        By default, Spotify tokens last one hour, but can be refreshed.
+        """
         def foo(*args, **kwargs):
             logging.debug('Checking if token is still good')
 
@@ -139,7 +134,7 @@ class MusicPlayer(Thread):
 
     @check_token
     def search(self, artist, title):
-        """Searches for a song by artist and title.
+        """Searches for a song by artist and title and gets the top result.
 
         Args:
             artist - The song artist
@@ -162,9 +157,6 @@ class MusicPlayer(Thread):
         logging.info('Returning {} ({})'.format(search_result_name, search_result_uri))
         return search_result_uri, search_result_name
 
-        #print(self.sp.currently_playing())
-        #self.sp.start_playback(uris=['spotify:track:2d4e45fmUnguxh6yqC7gNT'])
-
     def currently_playing(self):
         """Returns the current playing song.
 
@@ -172,8 +164,7 @@ class MusicPlayer(Thread):
         return self.sp.currently_playing()
 
     def get_volume(self):
-        """Gets the current volume
-        """
+        """Gets the current volume"""
         playback = self.sp.current_playback()
         if not playback:
             return 0
@@ -186,16 +177,19 @@ class MusicPlayer(Thread):
         return volume
 
     def set_volume(self, volume, device_id=None):
+        """Sets the volume"""
         self.sp.volume(volume, device_id=device_id)
 
     @check_token
-    def play_song(self, uri, start_time_minute=0, start_time_second=0, duration=30):
-        """Plays a song by its URI.
+    def _play_song(self, uri, start_time_minute=0, start_time_second=0, duration=30):
+        """Plays a song by its URI, while starting it in its own thread.
+
         Args:
             uri (string) - Unique Spotify URI for the song (returned as a tuple member from self.search)
             start_time_minutes (number) - How long to skip ahead in the song (minutes)
             start_time_seconds (number) - How long to skip ahead in the song (seconds)
             duration (number) - How long to play the song. If None, plays the whole thing.
+
         Returns the MusicThread created by this method
         """
         position = (start_time_second * 1000) + (start_time_minute * 60 * 1000)
@@ -208,7 +202,7 @@ class MusicPlayer(Thread):
         return t
 
     def fade_out(self, delta=FADE_DELTA):
-        """Fades out the music, not in a very smart way"""
+        """Fades out the music on the current device, not in a very smart way"""
         playback = self.sp.current_playback()
 
         if not playback:
@@ -229,7 +223,7 @@ class MusicPlayer(Thread):
             logging.debug('fade to {} '.format(starting_volume))
 
     def fade_in(self, volume=DEFAULT_VOLUME, delta=FADE_DELTA):
-        """Fades out the music, not in a very smart way"""
+        """Fades in the music on the current device, not in a very smart way"""
 
         starting_volume = self.get_volume() # device['volume_percent']
         logging.info('Fading in... current volume is {}'.format(starting_volume))
@@ -242,9 +236,7 @@ class MusicPlayer(Thread):
 
 
     def queue_song(self, uri, start_minute=0, start_second=0, duration=30):
-        """
-        Queues a song up
-        """
+        """Queues a song"""
         logging.info('Queueing song %s', uri)
         self.song_queue.put((uri, start_minute, start_second, duration))
 
@@ -318,7 +310,7 @@ class MusicPlayer(Thread):
             logging.info('Found a song on the queue!')
             logging.info('Playing %s at %d:%d duration %d', uri, start_minute, start_second, duration)
             current_playback = self.save_current_playback()
-            t = self.play_song(uri, start_minute, start_second, duration)
+            t = self._play_song(uri, start_minute, start_second, duration)
             logging.info('Waiting for song to end...')
             t.join()
             self.restore_playback()
@@ -327,17 +319,9 @@ class MusicPlayer(Thread):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s %(levelname)s] %(message)s', datefmt='%Y %b %d %H:%M:%S')
-    logging.info('Authenticating account')
     player = MusicPlayer()
-
-    #uri, _ = player.search('Papa Roach', 'Last Resort')
-    #player.queue_song(uri, 0, 0, 15)
-    #player.player_main()
-    #player.play_song(uri, start_time_minute=1, start_time_second=30, duration=20)
-    #player.fade_out()
     player.save_current_playback()
     sleep(1)
     player.restore_playback()
 
-    #print(player.get_playlist_offset('spotify:user:12164336727:playlist:2sSwD0ElIwd62KM1UjoDrr', 'spotify:track:5Fwif6oyL2EjXAFTGL909U'))
 
