@@ -41,4 +41,14 @@ You shouldn't need to re-authenticate unless the session expires or if the `.cac
 deleted.
 
 
+## Known Issues
 
+* Can't fade out music played on certain devices (smartphones, tablets). You will get the
+  following exception on these: 
+
+    Player command failed: Cannot control device volume
+
+* Can only return playback to albums and static playlists. Trying to return playback to
+  something like an artist will raise the following exception:
+
+    Can't have offset for context type: ARTIST
