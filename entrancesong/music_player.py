@@ -30,7 +30,7 @@ class MusicThread(Thread):
     a duration of a song since the Spotify API doesn't include that.
 
     """
-    def __init__(self, sp_context, mp_context, uri, position_ms, duration):
+    def __init__(self, sp_context, mp_context, uri, position_ms, duration=45, device_id=None):
         """Constructor
         Args
             sp_context - The spotify context
@@ -38,6 +38,7 @@ class MusicThread(Thread):
             uri - The URI to play
             position_ms - The position in ms to start from
             duration - The duration to play
+            device_id - The device to play on, or None to play on the default device
         """
         super().__init__()
 
@@ -46,19 +47,18 @@ class MusicThread(Thread):
         self.uri = uri
         self.position_ms = position_ms
         self.duration = duration
+        self.device_id = device_id
 
     def run(self):
         """Runs the thread.
-        Plays the song, sleeps and then stops the track.
+        Starts playback on the track, sleeps, and then fades out the track.
         """
         logging.info('Starting playback in new thread')
         self.sp.pause_playback()
+        self.sp.start_playback(device_id=self.device_id, uris=[self.uri], position_ms=self.position_ms)
         self.mp.set_volume(self.mp.default_volume)
-        self.sp.start_playback(uris=[self.uri], position_ms=self.position_ms)
-        if not self.duration:
-            logging.info('No duration specified. Playing the whole track!')
-            return
 
+        logging.info('Putting the thread to sleep for %s seconds', self.duration)
         sleep(self.duration)
         logging.info('Stopping playback')
 
@@ -70,9 +70,8 @@ class MusicThread(Thread):
             if uri == self.uri:
                 self.mp.fade_out()
                 self.sp.pause_playback()
-                #self.mp.set_volume(DEFAULT_VOLUME)
             else:
-                logging.info('Attempted to stop song {} but it\'s not playing'.format(self.uri))
+                logging.info('Attempted to stop song %s but it\'s not playing', self.uri)
         finally:
             return
 
@@ -204,7 +203,7 @@ class MusicPlayer(Thread):
         logging.info('Playing song {}'.format(uri))
         # Save the currently playing song so we can resume it later
 
-        t = MusicThread(self.sp, self, uri, position, duration)
+        t = MusicThread(self.sp, self, uri, position, duration, device_id=self.device_id)
         t.start()
         return t
 

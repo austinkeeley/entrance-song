@@ -1,7 +1,8 @@
 entrance-song
 ===============
 
-Plays music when a DHCP lease is assigned.
+Sniffs the local network for when a DHCP lease is assigned, identifies the device
+owner, and plays their entrance song.
 
 ## Requires
 
@@ -30,15 +31,20 @@ Set the following environment variables
     SPOTIPY_CLIENT_SECRET=<your client secret>
     SPOTIPY_REDIRECT_URI=http://localhost
 
-Complete the authentication by typing
+Now run bin/entrancesong
 
-    python music_player.py
+**NOTE:** You might need to run this as root since it sniffs on your network interface.
 
-A web browser will open a prompt you to authorize your account against the application. After authorizing,
-you will be redirected to a http://localhost URL. Copy this entire URL and paste it back into the terminal.
+If this is the first time authenticating, a web browser will open a prompt you to 
+authorize your account against the application. After authorizing, you will be 
+redirected to a http://localhost URL. Copy this entire URL and paste it back into the terminal.
 
 You shouldn't need to re-authenticate unless the session expires or if the `.cache-spotipy-user` file is
 deleted.
+
+As devices connect to the network and make DHCP requests, they will appear in the 
+database's `device` table. You'll need to add a row to the `owner` table and the
+`song` table and link them using the `owner_id` keys.
 
 
 ## Known Issues
@@ -46,9 +52,9 @@ deleted.
 * Can't fade out music played on certain devices (smartphones, tablets). You will get the
   following exception on these: 
 
-    Player command failed: Cannot control device volume
+        Player command failed: Cannot control device volume
 
 * Can only return playback to albums and static playlists. Trying to return playback to
   something like an artist will raise the following exception:
 
-    Can't have offset for context type: ARTIST
+        Can't have offset for context type: ARTIST
