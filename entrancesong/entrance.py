@@ -65,9 +65,9 @@ class EntranceController(object):
 
         if device.owner.song:
             song = device.owner.song
-            logging.info('#################################################################################')
+            logging.info('################################################################################')
             logging.info('%s is about to enter (%s)! playing %s by %s', device.owner.name, device.friendly_name, song.title, song.artist)
-            logging.info('#################################################################################')
+            logging.info('################################################################################')
         else:
             logging.info('Device owner %s doesn\'t have a song. Doing nothing...', device.owner.name)
             return
