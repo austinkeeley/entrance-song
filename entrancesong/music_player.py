@@ -123,13 +123,14 @@ class MusicPlayer(Thread):
 
         # If a device ID was provided, make sure it exists before we attempt to use it
         if device_id:
+            logging.info('Making sure device %s actually exists', device_id)
             if not self._check_device(device_id):
                 raise MusicPlayerException('Could not find device ID %s' % device_id)
         self.device_id = device_id
 
         self.token_refresh_datetime = datetime.now()
 
-    def _check_device(self):
+    def _check_device(self, device_id):
         """Checks if a device exists"""
         devices = self.sp.devices().get('devices', [])
         for device in devices:

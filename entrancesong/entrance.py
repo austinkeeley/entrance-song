@@ -105,7 +105,7 @@ def main():
         logging.info('Using the default device')
 
     try:
-        entrance = EntranceController(default_volume=args.default_volume)
+        entrance = EntranceController(default_volume=args.default_volume, device_id=args.device_id)
         entrance.start()
     except MusicPlayerException as e:
         logging.error(e.msg)
