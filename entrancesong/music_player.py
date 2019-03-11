@@ -8,6 +8,7 @@ import logging
 
 import spotipy
 import spotipy.util
+from spotipy.client import SpotifyException
 
 SEARCH_LIMIT = 20
 SPOTIPY_USER_NAME = 'spotipy_user'
@@ -46,8 +47,17 @@ class MusicThread(Thread):
         Starts playback on the track, sleeps, and then fades out the track.
         """
         logging.info('Starting playback in new thread')
-        self.sp.pause_playback()
-        self.sp.start_playback(device_id=self.device_id, uris=[self.uri], position_ms=self.position_ms)
+        try:
+            self.sp.pause_playback()
+        except SpotifyException as e:
+            # This often happens if there is no current active device. We'll assume there's
+            # device_id being used. The next try/catch block will handle it if not.
+            pass
+        try:
+            self.sp.start_playback(device_id=self.device_id, uris=[self.uri], position_ms=self.position_ms)
+        except SpotifyException as e:
+            logging.error(e)
+            return
         self.mp.set_volume(self.mp.default_volume)
 
         logging.info('Putting the thread to sleep for %s seconds', self.duration)

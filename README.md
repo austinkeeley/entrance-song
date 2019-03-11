@@ -39,7 +39,7 @@ If this is the first time authenticating, a web browser will open a prompt you t
 authorize your account against the application. After authorizing, you will be
 redirected to a http://localhost URL. Copy this entire URL and paste it back into the terminal.
 
-You shouldn't need to re-authenticate unless the session expires or if the `.cache-spotipy-user` file is
+You shouldn't need to re-authenticate unless the `.cache-spotipy-user` file is
 deleted.
 
 As devices connect to the network and make DHCP requests, they will appear in the
@@ -47,10 +47,19 @@ database's `device` table. You'll need to add a row to the `owner` table and the
 `song` table and link them using the `owner_id` keys.
 
 
-### Optional Arguments
+## Features
+
+* Can set a song to start at a certain minute and second. Sometime the best part of a song
+  isn't at the beginning.
+* Can set a duration to play so you don't have to listen to a whole track when you just
+  want the awesome part.
+
+
+## Optional Arguments
 
 * `--volume` The volume percentage to play entrance songs, integer. Defaults to 70.
-* `--device` The device to play the entrance song out of.
+* `--device` The device to play the entrance song out of. Defaults to using the device 
+  currently playing music.
 
 ## Helpful Utilities
 
@@ -67,3 +76,11 @@ database's `device` table. You'll need to add a row to the `owner` table and the
   something like an artist will raise the following exception:
 
         Can't have offset for context type: ARTIST
+
+* If no devices are currently playing and the `--device` option isn't specified, the
+  following exception will be raised:
+
+        Player command failed: No active device found
+
+* Probably a lot of other weird bugs. I mostly wrote this for myself to allow friends
+  to have their own custom entrance themes when they come over to watch a movie.
