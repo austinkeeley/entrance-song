@@ -77,6 +77,10 @@ class MusicThread(Thread):
             return
 
 
+class MusicPlayerException(Exception):
+    """Thrown when things playing music go bad"""
+    def __init__(self, msg):
+        self.msg = msg
 
 
 class MusicPlayer(Thread):
@@ -103,7 +107,7 @@ class MusicPlayer(Thread):
             return func(*args, **kwargs)
         return foo
 
-    def __init__(self, default_volume=70):
+    def __init__(self, default_volume=70, device_id=None):
         super().__init__()
         logging.info('Constructing music player... might need to authenticate')
         token, sp_auth = spotipy.util.prompt_for_user_token(SPOTIPY_USER_NAME, SCOPE)
@@ -117,8 +121,21 @@ class MusicPlayer(Thread):
         self.token = token
         self.default_volume = default_volume
 
+        # If a device ID was provided, make sure it exists before we attempt to use it
+        if device_id:
+            if not self._check_device(device_id):
+                raise MusicPlayerException('Could not find device ID %s' % device_id)
+        self.device_id = device_id
+
         self.token_refresh_datetime = datetime.now()
 
+    def _check_device(self):
+        """Checks if a device exists"""
+        devices = self.sp.devices().get('devices', [])
+        for device in devices:
+            if device.get('id', '') == device_id:
+                return True
+        return False
 
     @check_token
     def search(self, artist, title):

@@ -1,19 +1,23 @@
-"""Entrance song"""
+"""Entrance song entry controller.
+
+Sniffs for DHCP requests and queues up the music.
+
+"""
 import argparse
 from datetime import datetime
 import logging
 
 from scapy.all import Ether, DHCP, sniff
 
-from .music_player import MusicPlayer
+from .music_player import MusicPlayer, MusicPlayerException
+from spotipy import SpotifyException
 from . import data
 
 
 class EntranceController(object):
     """Class that starts listening for DHCP connections and playing music"""
-    def __init__(self, default_volume=70):
-        logging.info('Using default volume %d percent', default_volume)
-        self.player = MusicPlayer(default_volume=default_volume)
+    def __init__(self, default_volume=70, device_id=None):
+        self.player = MusicPlayer(default_volume=default_volume, device_id=device_id)
         self.last_entrance = (None, None)
 
     def start(self):
@@ -39,7 +43,6 @@ class EntranceController(object):
         hostname = self.get_dhcp_option_value(pkt[DHCP].options, 'hostname').decode('utf-8')
         ip = self.get_dhcp_option_value(pkt[DHCP].options, 'requested_addr')
 
-
         logging.info('DHCP request from %s for %s', mac_addr, ip)
         device = data.get_device_by_mac_addr(mac_addr)
         if not device:
@@ -62,19 +65,15 @@ class EntranceController(object):
 
         if device.owner.song:
             song = device.owner.song
-            logging.info('#########################################################################')
+            logging.info('#################################################################################')
             logging.info('%s is about to enter (%s)! playing %s by %s', device.owner.name, device.friendly_name, song.title, song.artist)
-            logging.info('#########################################################################')
+            logging.info('#################################################################################')
         else:
             logging.info('Device owner %s doesn\'t have a song. Doing nothing...', device.owner.name)
             return
 
         uri, _ = self.player.search(song.artist, song.title)
         if uri:
-            # TODO: make the music player have a queue and queue up the song instead
-            # maybe enqueue the current song at the lowest priority so it will play
-            # after this one finishes (and after anyone else enters)
-            #self.player.play_song(uri, duration=song.duration)
             self.player.queue_song(uri, duration=song.duration, start_minute=song.start_minutes, start_second=song.start_seconds)
         else:
             logging.info('No search results found...')
@@ -93,19 +92,27 @@ def main():
 
     parser = argparse.ArgumentParser(description='Listens for DHCP traffic and plays music')
     parser.add_argument('--volume', dest='default_volume', action='store', default=70, type=int)
-    parser.add_argument('--device', dest='default_device_id', action='store', default=None, type=str)
+    parser.add_argument('--device', dest='device_id', action='store', default=None, type=str)
     args = parser.parse_args()
 
     if args.default_volume > 100 or args.default_volume < 0:
         print('Volume must be between 0 and 100')
         exit(1)
 
+    if args.device_id:
+        logging.info('Using device %s', args.device_id)
+    else:
+        logging.info('Using the default device')
 
-    if args.default_device_id:
-        logging.info('Using device %s', args.default_device_id)
-
-    entrance = EntranceController(default_volume=args.default_volume)
-    entrance.start()
+    try:
+        entrance = EntranceController(default_volume=args.default_volume)
+        entrance.start()
+    except MusicPlayerException as e:
+        logging.error(e.msg)
+        exit(1)
+    except SpotifyException as e:
+        logging.error(e.msg)
+        exit(1)
 
 if __name__ == '__main__':
     main()
