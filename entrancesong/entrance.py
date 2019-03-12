@@ -6,6 +6,7 @@ Sniffs for DHCP requests and queues up the music.
 import argparse
 from datetime import datetime
 import logging
+import random
 
 from scapy.all import Ether, DHCP, sniff
 
@@ -64,7 +65,7 @@ class EntranceController(object):
             self.last_entrance = (device.owner, now)
 
         if device.owner.song:
-            song = device.owner.song
+            song = random.choice(device.owner.song)
             logging.info('################################################################################')
             logging.info('%s is about to enter (%s)! playing %s by %s', device.owner.name, device.friendly_name, song.title, song.artist)
             logging.info('################################################################################')

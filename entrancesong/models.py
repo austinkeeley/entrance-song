@@ -15,7 +15,7 @@ class Owner(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False, unique=True)
     devices = relationship("Device", back_populates="owner", lazy='joined')
-    song = relationship("Song", uselist=False, lazy='joined')
+    song = relationship("Song", uselist=True, lazy='joined')
 
 class Device(Base):
     """A Device that has a MAC address and an owner"""
