@@ -82,5 +82,8 @@ database's `device` table. You'll need to add a row to the `owner` table and the
 
         Player command failed: No active device found
 
+* If your entrance song duration is very short, the fades might not work when transfering
+  between devices.
+
 * Probably a lot of other weird bugs. I mostly wrote this for myself to allow friends
   to have their own custom entrance themes when they come over to watch a movie.

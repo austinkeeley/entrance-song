@@ -308,7 +308,25 @@ class MusicPlayer(Thread):
             self.sp.transfer_playback(device_id=device_id, force_play=False)
             sleep(1)
             self.set_volume(0, device_id=device_id)
-            self.sp.start_playback(context_uri=uri, offset={'uri': item.get('uri', '')}, position_ms=position_ms)
+
+            # Spotify has a a weird underdocumented thing where it can't resume playback of a
+            # COLLECTION_ALBUM. I have no clue what that is, but it seems to be if you are playing
+            # something from your saved collections.
+            try:
+                self.sp.start_playback(context_uri=uri, offset={'uri': item.get('uri', '')}, position_ms=position_ms)
+            except spotipy.client.SpotifyException as e:
+                logging.warn('Could not start playback. Maybe this is a COLLECTION_ALBUM?')
+                self.sp.start_playback(context_uri=uri, position_ms=position_ms)
+                #self.sp.pause_playback()
+                i = 0
+                track_number = self.original_playback.get('item', {}).get('track_number', 0)
+                logging.warn('Skipping to track number %d', track_number)
+                while (i + 1) < track_number:
+                    i = i + 1
+                    self.sp.next_track()
+                self.sp.seek_track(position_ms)
+                logging.warn('Done! Maybe try playing the full album next time.')
+
             if fade:
                 self.fade_in(volume=original_volume)
 
