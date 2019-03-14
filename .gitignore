@@ -2,6 +2,6 @@
 *.pcap
 .cache-*
 spotify_credentials.sh
-entrance_song.db
+*.db
 config.py
 venv/
