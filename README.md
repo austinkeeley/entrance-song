@@ -1,10 +1,10 @@
 entrance-song
 ===============
 
-Sniffs the local network for when a DHCP lease is assigned, identifies the device
+Sniffs the local network for DHCP requests, identifies the device
 owner, and plays their entrance song.
 
-## Requires
+## Requirements
 
 * A DHCP server
 * A Spotify premium account
@@ -31,7 +31,7 @@ Set the following environment variables
     SPOTIPY_CLIENT_SECRET=<your client secret>
     SPOTIPY_REDIRECT_URI=http://localhost
 
-Now run bin/entrancesong
+Now run `bin/entrancesong`
 
 **NOTE:** You might need to run this as root since it sniffs on your network interface.
 
@@ -49,10 +49,11 @@ database's `device` table. You'll need to add a row to the `owner` table and the
 
 ## Features
 
-* Can set a song to start at a certain minute and second. Sometime the best part of a song
+* Set a song to start at a certain minute and second. Sometime the best part of a song
   isn't at the beginning.
-* Can set a duration to play so you don't have to listen to a whole track when you just
+* Set a duration to play so you don't have to listen to a whole track when you just
   want the awesome part.
+* Supports multiple songs per device owner to have one randomly selected.
 
 
 ## Optional Arguments
@@ -63,7 +64,7 @@ database's `device` table. You'll need to add a row to the `owner` table and the
 
 ## Helpful Utilities
 
-* There's a stand-alone Python script `bin/devices` that that will list your devices.
+* `bin/devices` - Lists all your devices connected to your Spotify account.
 
 ## Known Issues
 
