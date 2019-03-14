@@ -17,7 +17,8 @@ from . import data
 
 class EntranceController(object):
     """Class that starts listening for DHCP connections and playing music"""
-    def __init__(self, default_volume=70, device_id=None):
+    def __init__(self, default_volume=70, device_id=None, virtual_mac=False):
+        self.virtual_mac = virtual_mac
         self.player = MusicPlayer(default_volume=default_volume, device_id=device_id)
         self.last_entrance = (None, None)
 
@@ -45,7 +46,7 @@ class EntranceController(object):
         ip = self.get_dhcp_option_value(pkt[DHCP].options, 'requested_addr')
 
         logging.info('DHCP request from %s for %s', mac_addr, ip)
-        device = data.get_device_by_mac_addr(mac_addr)
+        device = data.get_device_by_mac_addr(mac_addr, self.virtual_mac)
         if not device:
             logging.info('This isn\'t a device I know about... Adding it to the database')
             data.insert_device(mac_addr, hostname)
@@ -94,6 +95,7 @@ def main():
     parser = argparse.ArgumentParser(description='Listens for DHCP traffic and plays music')
     parser.add_argument('--volume', dest='default_volume', action='store', default=70, type=int)
     parser.add_argument('--device', dest='device_id', action='store', default=None, type=str)
+    parser.add_argument('--virtualmac', dest='virtual_mac', action='store_true')
     args = parser.parse_args()
 
     if args.default_volume > 100 or args.default_volume < 0:
@@ -105,8 +107,11 @@ def main():
     else:
         logging.info('Using the default device')
 
+    if args.virtual_mac:
+        logging.info('Using virtual MAC address filtering')
+
     try:
-        entrance = EntranceController(default_volume=args.default_volume, device_id=args.device_id)
+        entrance = EntranceController(default_volume=args.default_volume, device_id=args.device_id, virtual_mac=args.virtual_mac)
         entrance.start()
     except MusicPlayerException as e:
         logging.error(e.msg)
