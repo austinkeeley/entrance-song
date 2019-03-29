@@ -42,7 +42,9 @@ class EntranceController(object):
             return
 
         mac_addr = pkt[Ether].src
-        hostname = self.get_dhcp_option_value(pkt[DHCP].options, 'hostname').decode('utf-8')
+        hostname = self.get_dhcp_option_value(pkt[DHCP].options, 'hostname')
+        if hostname:
+            hostname = hostname.decode('utf-8')
         ip = self.get_dhcp_option_value(pkt[DHCP].options, 'requested_addr')
 
         logging.info('DHCP request from %s for %s', mac_addr, ip)
